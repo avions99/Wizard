@@ -1,0 +1,1235 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Freusard Pro Online</title>
+    <style>
+        :root {
+            --gold: #ffcc00;
+            --blue: #2196F3;
+            --bg: #0a0a0a;
+            --card-bg: #1e1e1e;
+            --table-green-light: #204030;
+            --table-green-dark: #0a1a12;
+            --wood-border: #3e2723;
+            --error-red: #ff3333;
+        }
+
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; overflow: hidden; touch-action: manipulation; }
+        .hidden { display: none !important; }
+
+        /* SCROLLBAR PERSONALIZZATA */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: var(--wood-border); border: 1px solid var(--gold); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+        /* BOTTONI */
+        .btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; text-transform: uppercase; transition: all 0.2s; font-size: 0.95em; letter-spacing: 0.5px; }
+        .btn:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .btn:active { transform: translateY(0); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .btn-primary { background: var(--blue); color: white; box-shadow: 0 2px 5px rgba(33, 150, 243, 0.4); }
+        .btn-success { background: #43a047; color: white; box-shadow: 0 2px 5px rgba(67, 160, 71, 0.4); }
+        .btn-danger { background: #e53935; color: white; }
+        .btn-gold { background: var(--gold); color: black; box-shadow: 0 2px 10px rgba(255, 204, 0, 0.4); }
+
+        /* LAYOUT */
+        #game-screen { display: grid; grid-template-columns: 1fr 350px; height: 100dvh; width: 100vw; }
+        @media (max-width: 1100px) {
+             #game-screen { grid-template-columns: 1fr 300px; }
+        }
+        @media (max-width: 850px) {
+            #game-screen { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+            .sidebar { display: none !important; }
+            .sidebar.mobile-visible { display: flex !important; position: fixed; inset: 0; z-index: 2500; width: 100%; box-sizing: border-box; }
+            #mobile-menu-btn { display: block !important; }
+        }
+
+        /* TAVOLO */
+        .table-area {
+            background: radial-gradient(circle at center, var(--table-green-light) 0%, var(--table-green-dark) 80%);
+            position: relative; display: flex; flex-direction: column; overflow: hidden;
+            border: 12px solid var(--wood-border); border-radius: 15px; margin: 10px;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.7), 0 0 20px rgba(0,0,0,0.5);
+            z-index: 1;
+        }
+        @media (max-width: 850px) { .table-area { margin: 0; border-width: 4px; border-radius: 0; } }
+
+        /* BRISCOLA FIX */
+        .picking-trump-mode .table-area { z-index: 1000; }
+        .picking-trump-mode .top-bar,
+        .picking-trump-mode #table-center,
+        .picking-trump-mode .open-cards-container {
+            opacity: 1 !important;
+            filter: none !important;
+            pointer-events: none;
+        }
+        .picking-trump-mode #hand-container { z-index: 2500 !important; opacity: 1 !important; pointer-events: auto !important; }
+        /* PULSANTE BOT */
+        .btn-bot {
+            background: linear-gradient(135deg, #673AB7 0%, #512DA8 100%); /* Viola magico */
+            color: white;
+            border: 1px solid #7E57C2;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; /* Spazio tra icona e testo */
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .btn-bot:hover {
+            background: linear-gradient(135deg, #7E57C2 0%, #673AB7 100%);
+            box-shadow: 0 6px 12px rgba(103, 58, 183, 0.5); /* Alone viola */
+            transform: translateY(-2px);
+        }
+
+        .btn-bot:active {
+            transform: translateY(0);
+        }
+        /* TOP BAR */
+        .top-bar {
+            position: absolute; top: 0; left: 0; width: 100%;
+            height: 90px; /* Altezza aumentata leggermente per contenere il codice */
+            display: flex; justify-content: center;
+            pointer-events: none; z-index: 50;
+        }
+        .round-info-zone {
+            text-align: center; background: rgba(0,0,0,0.6);
+            padding: 5px 25px;
+            border-radius: 0 0 15px 15px; border: 1px solid rgba(255,255,255,0.1); border-top: none;
+            backdrop-filter: blur(4px); display: flex; flex-direction: column; align-items: center;
+            height: fit-content;
+        }
+
+        /* STILE CODICE STANZA - SPOSTATO NELLA TOP BAR */
+        #room-display {
+            font-size: 0.8em;
+            color: #aaa;
+            font-weight: normal;
+            margin-bottom: 2px;
+            letter-spacing: 1px;
+        }
+        #room-display strong { color: var(--gold); font-weight: bold; }
+
+        .round-title { margin: 0; font-size: 1em; color: #fff; text-transform: uppercase; letter-spacing: 1px; }
+        .turn-badge { background: var(--gold); color: #000; padding: 2px 10px; border-radius: 20px; font-size: 0.75em; font-weight: bold; margin-top: 3px; box-shadow: 0 0 10px rgba(255, 204, 0, 0.4); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        /* --- BRISCOLA --- */
+        .trump-zone {
+            position: absolute; top: 20px; right: 20px;
+            background: #1a1a1a; padding: 10px;
+            border-radius: 12px; border: 2px solid var(--gold);
+            text-align: center; min-width: 90px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            pointer-events: auto; z-index: 60;
+        }
+        .trump-label { color: var(--gold); font-size: 0.7em; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; border-bottom: 1px solid #444; padding-bottom: 3px; display: block; }
+        .trump-img { height: 80px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); border: 1px solid #333; }
+        .trump-suit-big { font-size: 3.5em; line-height: 0.8; text-shadow: 0 2px 4px rgba(0,0,0,0.5); margin-top: 5px; }
+
+        @media (max-width: 850px) {
+            .trump-zone {
+                top: 75px; /* Spazio per la top bar più alta */
+                left: 50%; transform: translateX(-50%); right: auto;
+                padding: 6px; min-width: 60px;
+            }
+            .trump-img { height: 60px; }
+            .trump-label { font-size: 0.6em; margin-bottom: 3px; }
+            .trump-suit-big { font-size: 2.5em; }
+        }
+
+        /* --- CARTE AVVERSARI --- */
+        .open-cards-container {
+            position: absolute; top: 0; left: 0; width: 130px; height: 100%;
+            background: rgba(0, 0, 0, 0.4); border-right: 1px solid rgba(255,255,255,0.1);
+            display: flex; flex-direction: column; padding: 15px 10px; box-sizing: border-box;
+            gap: 15px; overflow-y: auto; z-index: 40; pointer-events: auto;
+        }
+        .open-cards-title {
+            color: var(--gold); font-size: 0.7em; font-weight: bold;
+            text-align: center; margin-bottom: 5px; text-transform: uppercase;
+            border-bottom: 1px solid #444; padding-bottom: 5px;
+            letter-spacing: 1px;
+        }
+        .open-card-player { display: flex; flex-direction: column; align-items: center; }
+        .open-card-player h5 {
+            margin: 0 0 4px 0; color: #ccc; font-size: 0.7em;
+            text-align: center; text-transform: uppercase;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        .open-card-img { width: 60px; height: 90px; border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.6); border: 1px solid #333; display: block; margin: 0 auto; }
+
+        @media (max-width: 850px) {
+            .open-cards-container {
+                top: 195px; /* Abbassato ulteriormente */
+                left: 50%; transform: translateX(-50%); width: 95%; height: auto;
+                flex-direction: row; flex-wrap: nowrap;
+                justify-content: center; align-items: center;
+                overflow-y: hidden; overflow-x: auto;
+                padding: 8px 10px; background: rgba(20, 30, 20, 0.90);
+                border: 1px solid rgba(255, 204, 0, 0.2);
+                border-radius: 12px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            }
+            .open-cards-title {
+                display: block; position: absolute; top: -20px; left: 50%;
+                transform: translateX(-50%); background: transparent; border: none;
+                font-size: 0.65em; color: rgba(255, 255, 255, 0.7);
+                padding: 0; margin: 0; width: 100%; text-shadow: 0 1px 2px black;
+                border-bottom: none;
+            }
+            .open-card-player { min-width: 50px; margin: 0 6px; }
+            .open-card-img { width: 42px; height: 63px; }
+            .open-card-player h5 { font-size: 0.6em; max-width: none; width: auto; white-space: normal; overflow: visible; }
+        }
+
+        /* --- CENTRO TAVOLO --- */
+        #table-center {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
+            width: 80%; max-width: 600px;
+            height: auto; min-height: 25vh;
+            border: 2px dashed rgba(255,255,255,0.15);
+            border-radius: 50px;
+            display: flex; justify-content: center; align-items: center;
+            gap: 10px; z-index: 10;
+            flex-wrap: wrap; /* Importante per 6 carte */
+            padding: 15px; box-sizing: border-box;
+        }
+
+        .table-card-container { text-align: center; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; margin-bottom: 5px; }
+        .table-card-container small { display: block; position: absolute; bottom: -20px; width: 100%; font-size: 0.75em; color: white; text-shadow: 0 1px 2px black; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        @keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        .card { width: 90px; height: 130px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.4); background-size: cover; border: 1px solid #111; }
+        .card.on-table { width: 80px; height: 115px; cursor: default; }
+        @media (max-width: 850px) {
+            .card.on-table { width: 60px; height: 90px; }
+            #table-center { width: 90%; gap: 5px; padding: 10px; border-radius: 30px; }
+        }
+
+        /* --- MANO CARTE --- */
+        #hand-container { position: absolute; bottom: 0; width: 100%; height: 180px; padding-top: 50px; display: flex; justify-content: center; align-items: flex-end; z-index: 100; pointer-events: none; overflow: visible; }
+        #hand { display: flex; justify-content: center; align-items: flex-end; pointer-events: auto; padding: 0 20px 20px 20px; }
+
+        .hand-card {
+            width: 100px; height: 145px;
+            border-radius: 9px; box-shadow: -2px 0 10px rgba(0,0,0,0.4);
+            transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative; transform-origin: bottom center;
+            cursor: pointer; margin-left: -50px;
+            border: 1px solid rgba(255,255,255,0.2);
+            touch-action: manipulation;
+        }
+        .hand-card::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; z-index: -1; pointer-events: auto; }
+
+        @media (hover: hover) {
+            .hand-card:hover { transform: translateY(-50px) scale(1.15) !important; z-index: 1000 !important; box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+            .hand-card:hover::after { bottom: -60px; height: 220px; }
+        }
+
+        @media (max-width: 850px) {
+            #hand-container { height: 170px; padding-top: 60px; overflow-x: auto; justify-content: flex-start; bottom: 30px; }
+            #hand { padding: 0 40px 20px 40px; min-width: max-content; }
+            .hand-card { width: 80px; height: 116px; margin-left: -35px; }
+        }
+        .hand-card:first-child { margin-left: 0; }
+
+        #bid-controls { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%); background: rgba(15, 15, 15, 0.98); padding: 25px; border-radius: 15px; border: 2px solid var(--gold); z-index: 2000; text-align: center; box-shadow: 0 0 60px rgba(0,0,0,0.9); width: 85%; max-width: 380px; margin: 0; box-sizing: border-box; }
+        .bid-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 15px; }
+        .bid-btn { width: 45px; height: 45px; border-radius: 6px; border: 1px solid #444; background: #222; color: white; font-weight: bold; cursor: pointer; font-size: 1.1em; transition: 0.2s; }
+        .bid-btn:hover { background: var(--blue); border-color: var(--blue); transform: scale(1.1); }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            background: var(--card-bg); border-left: 1px solid #333; padding: 10px;
+            overflow: hidden; display: flex; flex-direction: column; gap: 15px;
+            z-index: 200; box-shadow: -5px 0 20px rgba(0,0,0,0.3); box-sizing: border-box;
+        }
+        .sidebar-section { display: flex; flex-direction: column; }
+        .sidebar-section h3 {
+            margin: 0 0 8px 0; color: var(--gold); border-bottom: 1px solid rgba(255, 204, 0, 0.3);
+            padding-bottom: 5px; font-size: 0.85em; text-transform: uppercase;
+        }
+        #player-list-container { flex-shrink: 0; }
+
+        .player-list-item {
+            background: rgba(255,255,255,0.05); padding: 6px 10px;
+            border-radius: 6px; margin-bottom: 6px; border-left: 4px solid transparent;
+            display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 10px;
+        }
+        .player-list-item.active { border-left-color: var(--gold); background: linear-gradient(90deg, rgba(255,204,0,0.15) 0%, transparent 100%); }
+        .p-name { font-weight: bold; font-size: 0.9em; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+        .p-stats { display: flex; gap: 10px; font-size: 0.75em; color: #ccc; flex-shrink: 0; }
+        .p-stat { display: flex; gap: 4px; align-items: center; }
+        .p-stat span:first-child { text-transform: uppercase; opacity: 0.6; font-size: 0.9em; }
+        .p-stat span:last-child { font-weight: bold; color: white; }
+
+        .chat-section-wrapper { flex: 1; display: flex; flex-direction: column; min-height: 150px; overflow: hidden; }
+        #chat-container { flex: 1; display: flex; flex-direction: column; background: rgba(0, 0, 0, 0.3); border-radius: 8px; overflow: hidden; border: 1px solid #333; }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        #lobby-controls { flex: 1; overflow-y: auto; border-top: 1px solid #333; padding-top: 10px; scrollbar-width: none; min-height: 0; }
+        #lobby-controls::-webkit-scrollbar { display: none; }
+        .config-panel { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; box-sizing: border-box; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .round-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; overflow-y: visible; margin-top: 5px; }
+        .round-check-wrapper { position: relative; height: 35px; }
+        .round-check-label { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; background: #2a2a2a; border-radius: 4px; cursor: pointer; font-size: 0.9em; font-weight: bold; border: 1px solid #444; transition: 0.1s; }
+        .round-check-input { position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+        .round-check-input:checked + .round-check-label { background: var(--gold); color: black; border-color: var(--gold); box-shadow: 0 0 5px rgba(255,204,0,0.5); }
+        .round-check-input:disabled + .round-check-label { opacity: 0.3; cursor: not-allowed; background: #111; border-color: #333; }
+
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 3100; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px); }
+        #choice-overlay { background: rgba(0,0,0,0.1) !important; backdrop-filter: none !important; pointer-events: none; padding-bottom: 150px; z-index: 3200; }
+        #choice-overlay .modal { pointer-events: auto; }
+        .modal {
+        background: #181818;
+        padding: 30px;
+        border-radius: 15px;
+        box-sizing: border-box;
+        width: 1000px;
+        max-width: 95%;
+        border: 1px solid var(--gold);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+        text-align: center;}
+        .toast-container { position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 5000; width: 90%; max-width: 400px; pointer-events: none; }
+        .toast-error { background: #111; color: #ffcccc; padding: 15px; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,1); display: flex; align-items: center; gap: 15px; border: 2px solid var(--error-red); justify-content: center; font-weight: bold; font-size: 1.1em; text-align: center; pointer-events: auto; animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+        #trick-winner-notification {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
+            background: rgba(0,0,0,0.95); color:var(--gold); padding: 20px 40px; border-radius: 50px;
+            border: 3px solid var(--gold); z-index: 9999; pointer-events: none; font-size:1.5em;
+            text-align:center; box-shadow:0 0 50px black; white-space: nowrap;
+        }
+
+        .podium-item { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; font-size: 1.1em; }
+        .podium-item.winner { background: rgba(255,204,0,0.1); color: var(--gold); font-weight: bold; border: 1px solid var(--gold); border-radius: 6px; }
+
+        /* --- TABELLA STORICO --- */
+        .history-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 5px;
+            /* RIMOSSO table-layout: fixed; per permettere lo scorrimento */
+        }
+
+        .history-table th {
+            vertical-align: bottom;
+            padding: 10px 8px; /* Più spazio */
+            border-bottom: 1px solid #444;
+            color: #ddd;
+            font-size: 0.95em;
+            text-transform: uppercase;
+            text-align: center;
+            white-space: nowrap;
+
+            /* MODIFICA: Larghezza minima per leggere i nomi */
+            min-width: 80px;
+        }
+
+        .history-table td {
+            padding: 10px 8px;
+            text-align: center;
+            border-bottom: 1px solid #333;
+            font-size: 1em;
+            min-width: 80px; /* Allinea con l'header */
+        }
+
+        /* COLONNA ROUND (Prima colonna) */
+        .history-table th:first-child, .history-table td:first-child {
+            /* MODIFICA: Larghezza sufficiente per la parola "ROUND" */
+            min-width: 60px;
+            width: auto;
+            font-weight: bold;
+            color: var(--gold);
+            text-align: center;
+
+            /* EFFETTO STICKY: La colonna Round resta ferma mentre scorri i nomi */
+            position: sticky;
+            left: 0;
+            background: #181818; /* Colore sfondo uguale alla modale per coprire il testo che scorre sotto */
+            z-index: 5;
+            border-right: 1px solid #333; /* Separatore visivo */
+        }
+
+        /* FIX MOBILE: Rimuoviamo la riduzione drastica del font */
+        @media (max-width: 850px) {
+            /* Non serve più rimpicciolire il font a 9px perché ora c'è lo scroll orizzontale */
+            .history-table th, .history-table td {
+                font-size: 0.85em;
+                padding: 8px 4px;
+            }
+            .modal {
+            padding: 15px; /* Riduciamo il padding su mobile per guadagnare spazio */
+            width: 95%;    /* Forza la larghezza */
+            }
+        }
+
+        #mobile-menu-btn { display: none; position: fixed; top: 15px; right: 15px; z-index: 3000; background: #222; border: 1px solid var(--gold); color: var(--gold); padding: 8px 12px; border-radius: 5px; font-size: 1.4em; }
+
+        .chat-msg { font-size: 0.85em; padding: 6px 10px; border-radius: 6px; max-width: 85%; word-wrap: break-word; }
+        .chat-msg.mine { align-self: flex-end; background: var(--blue); color: white; border-bottom-right-radius: 1px; }
+        .chat-msg.theirs { align-self: flex-start; background: #333; color: #ddd; border-bottom-left-radius: 1px; }
+        .chat-sender { font-size: 0.7em; opacity: 0.7; margin-bottom: 2px; display: block; }
+        #chat-input-area { display: flex; padding: 8px; background: rgba(0,0,0,0.5); border-top: 1px solid #333; flex-shrink: 0; }
+        #chat-input { flex: 1; background: #111; border: 1px solid #444; color: white; padding: 8px; border-radius: 4px; outline: none; }
+        #chat-input:focus { border-color: var(--gold); }
+
+
+        /* --- NUOVI STILI PER IL GAME OVER "SPLIT" --- */
+
+.game-over-body {
+    display: flex;
+    gap: 20px;
+    text-align: left;
+    height: 400px; /* Altezza fissa per tenere il bottone visibile */
+}
+
+/* Colonna Podio (Sinistra) */
+.go-section-podium {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid #333;
+    padding-right: 15px;
+}
+
+/* Colonna Storico (Destra) */
+.go-section-history {
+    flex: 2; /* Più largo per la tabella */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Contenitore tabella storico specifico per il fine partita */
+#final-history-container {
+    flex: 1;
+    overflow-y: auto;
+    background: rgba(0,0,0,0.2);
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+
+/* MOBILE: Configurazione "Unico Blocco Scorrevole" */
+@media (max-width: 850px) {
+    .game-over-body {
+        /* Disposizione verticale */
+        flex-direction: column;
+
+        /* ALTEZZA: Occupa fino al 60% dello schermo, poi scorre */
+        height: auto;
+        max-height: 60vh;
+
+        /* SCROLL: Questo permette di scorrere tutto il contenuto (podio + storico) insieme */
+        overflow-y: auto;
+        display: block; /* Meglio di flex per lo scroll semplice */
+    }
+
+    /* Il Podio non ha più limiti, si espande quanto serve */
+    .go-section-podium {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 2px dashed #333; /* Separatore visivo più chiaro */
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+        flex: none;
+        overflow: visible; /* Niente scroll interno */
+    }
+
+    /* Lo Storico si espande completamente */
+    .go-section-history {
+        flex: none;
+        overflow: visible; /* Niente scroll interno */
+        height: auto;
+    }
+
+    /* La tabella si allunga al massimo, niente scroll interno */
+    #final-history-container {
+        overflow: visible;
+        height: auto;
+        background: transparent; /* Togliamo il fondo scuro per pulizia */
+        border: none;
+    }
+}
+
+/* LOGO DEL GIOCO */
+.title {
+    /* Percorso aggiornato per puntare a static/logo */
+    background-image: url('/static/logo/wizard_logo.png');
+
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 100%;
+    height: 150px; /* Altezza regolabile a piacere */
+    margin-bottom: 20px;
+}
+
+/* Adattamento per cellulari */
+@media (max-width: 600px) {
+    .title {
+        height: 100px; /* Più piccolo su mobile */
+    }
+}
+
+        /* Pulsante KICK nella lobby */
+    .kick-btn {
+        background: transparent;
+        border: none;
+        color: #ff4444;
+        font-weight: bold;
+        font-size: 1.2em;
+        cursor: pointer;
+        padding: 0 5px;
+        margin-left: 10px;
+        transition: transform 0.2s;
+    }
+    .kick-btn:hover {
+        transform: scale(1.3);
+        color: red;
+    }
+
+    </style>
+</head>
+<body>
+
+<button id="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+
+<div id="choice-overlay" class="overlay hidden">
+    <div class="modal">
+        <h3 style="color:var(--gold);">SEI IL MAZZIERE</h3>
+        <p>Scegli il seme della briscola</p>
+        <div>
+            <button class="suit-btn" onclick="send('select_trump',{suit:'CUORI'})" style="font-size:3em; width:70px; margin:5px; border:none; border-radius:10px; cursor:pointer;">♥️</button>
+            <button class="suit-btn" onclick="send('select_trump',{suit:'QUADRI'})" style="font-size:3em; width:70px; margin:5px; border:none; border-radius:10px; cursor:pointer;">♦️</button>
+            <button class="suit-btn" onclick="send('select_trump',{suit:'FIORI'})" style="font-size:3em; width:70px; margin:5px; border:none; border-radius:10px; cursor:pointer;">♣️</button>
+            <button class="suit-btn" onclick="send('select_trump',{suit:'PICCHE'})" style="font-size:3em; width:70px; margin:5px; border:none; border-radius:10px; cursor:pointer;">♠️</button>
+        </div>
+    </div>
+</div>
+
+<div id="history-overlay" class="overlay hidden">
+    <div class="modal" style="width: 95%; max-width: 900px;">
+        <h3 style="color:var(--gold);">STORICO COMPLETO</h3>
+        <div id="history-container" style="max-height: 70vh; overflow-y: auto;"></div>
+        <button class="btn btn-primary" onclick="toggleHistoryModal()" style="margin-top:20px;">CHIUDI</button>
+    </div>
+</div>
+
+<div id="round-results-overlay" class="overlay hidden">
+    <div class="modal">
+        <h3 style="color:var(--gold);">📊 RISULTATI ROUND <span id="round-results-num"></span></h3>
+        <div style="overflow-x: auto;">
+            <table class="history-table" id="round-results-content" style="margin: 20px 0;"></table>
+        </div>
+        <div style="margin-top:20px;">
+            <button id="continue-btn" class="btn btn-success" style="width:100%; padding:15px; font-size:1.1em;">Continua ▶️</button>
+        </div>
+    </div>
+</div>
+
+<div id="game-over-overlay" class="overlay hidden">
+    <div class="modal" style="border-color: var(--gold);">
+        <div style="font-size: 4em; margin-bottom: -15px;">🏆</div>
+        <h2 style="color:var(--gold); margin-bottom: 20px;">FINE PARTITA</h2>
+        <div class="game-over-body">
+            <div class="go-section-podium">
+                <h4 style="color:#888; text-transform:uppercase; margin-bottom:10px;">Classifica</h4>
+                <div id="podium-content"></div>
+            </div>
+
+            <div class="go-section-history">
+                <h4 style="color:#888; text-transform:uppercase; margin-bottom:10px;">Storico Completo</h4>
+                <div id="final-history-container" class="no-scrollbar"></div>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="send('leave_game',{}); location.reload();" style="margin-top:25px; width:100%;">TORNA ALLA LOBBY</button>
+    </div>
+</div>
+
+<div class="toast-container" id="toast-container"></div>
+
+<div id="start-screen" style="height:100vh; display:flex; justify-content:center; align-items:center; background: radial-gradient(circle, #222 0%, #000 100%); padding: 20px;">
+    <div style="background: #252525; padding: 40px; border-radius: 20px; width: 100%; max-width: 400px; text-align: center; border: 1px solid #333; box-shadow: 0 20px 60px black;">
+        <div class="title"></div>
+        <input type="text" id="nick" placeholder="Nickname" maxlength="12" style="width:100%; padding:15px; margin:15px 0; background:#1a1a1a; border:1px solid #444; color:white; border-radius:5px; text-align:center; font-size:1.1em;">
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button class="btn btn-success" onclick="createRoom()" style="flex:1;">Crea Partita</button>
+        </div>
+        <div style="margin:20px 0; opacity:0.5;">oppure</div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="room-code" placeholder="CODICE" style="width: 100px; text-transform:uppercase; margin:0; text-align:center; background:#1a1a1a; border:1px solid #444; color:white; border-radius:5px;">
+            <button class="btn btn-primary" onclick="joinRoom()" style="flex:1;">Entra</button>
+        </div>
+    </div>
+</div>
+
+<div id="game-screen" class="hidden">
+    <div class="table-area">
+        <div id="trick-winner-notification" class="hidden"></div>
+
+        <div class="top-bar">
+            <div class="round-info-zone">
+                <div id="room-display"></div>
+                <h3 class="round-title">Round <span id="round-val">-</span></h3>
+                <div id="turn-indicator" class="turn-badge hidden"></div>
+            </div>
+        </div>
+
+        <div class="trump-zone">
+            <div class="trump-label">BRISCOLA</div>
+            <div id="trump-content"></div>
+        </div>
+
+        <div id="open-cards-display" class="open-cards-container hidden"></div>
+
+        <div id="table-center"></div>
+        <div id="bid-controls" class="hidden"></div>
+
+        <div id="hand-container">
+            <div id="hand"></div>
+        </div>
+    </div>
+
+    <div class="sidebar" id="sidebar">
+        <button onclick="toggleSidebar()" style="align-self: flex-end; background:none; border:none; color:white; font-size:2em; cursor:pointer;" class="mobile-only-btn hidden">×</button>
+
+    <div class="sidebar-section" style="flex-shrink: 0;">
+        <h3>GIOCATORI</h3>
+        <div id="player-list-container">
+            <div id="player-list"></div>
+
+        <button id="add-bot-btn" class="btn btn-bot hidden">
+            <span>🤖</span> Aggiungi Bot
+        </button>
+
+        </div>
+    </div>
+
+        <div id="sidebar-chat-section" class="sidebar-section chat-section-wrapper hidden">
+            <h3>CHAT</h3>
+            <div id="chat-container">
+                <div id="chat-messages" class="no-scrollbar"></div>
+                <div id="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Scrivi..." maxlength="50" onkeydown="if(event.key==='Enter') sendChat()">
+                    <button onclick="sendChat()" style="background:var(--gold); border:none; border-radius:4px; margin-left:5px; cursor:pointer; font-weight:bold;">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="lobby-controls" class="hidden">
+            <div class="config-panel" id="config-panel">
+                <h4 style="color:var(--gold); margin:0 0 10px 0; font-size:0.9em;">CONFIGURAZIONE</h4>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <select id="max-players" onchange="updateRoundLimits()" style="padding:8px; background:#111; color:white; border:1px solid #444; border-radius:4px;">
+                        <option value="3">3 Giocatori</option><option value="4">4 Giocatori</option><option value="5">5 Giocatori</option><option value="6">6 Giocatori</option>
+                    </select>
+                    <div>
+                        <div style="display:flex; gap:5px; margin-bottom:5px;">
+                            <button class="btn btn-primary" onclick="selectAllRounds()" style="padding:4px 8px; font-size:0.75em; flex:1;">Tutti</button>
+                            <button class="btn btn-danger" onclick="deselectAllRounds()" style="padding:4px 8px; font-size:0.75em; flex:1;">Nessuno</button>
+                        </div>
+                        <div id="rounds-selector" class="round-grid no-scrollbar"></div>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:0.9em; cursor:pointer;">
+                        <input type="checkbox" id="open-cards" style="width:16px; height:16px;"> 1° round carte scoperte
+                    </label>
+                    <button class="btn btn-success" style="color:white; margin-top:5px;" onclick="saveConfig()">SALVA & AGGIORNA</button>
+                </div>
+            </div>
+
+            <div id="ready-panel" class="hidden" style="text-align:center; margin-top:20px;">
+                <p id="player-count-msg" style="color:#aaa; font-weight:bold; margin-bottom:10px;"></p>
+                <button id="start-btn" class="btn btn-success hidden" onclick="send('start_game',{})" style="width:100%; margin-bottom:10px; padding:15px;">AVVIA PARTITA</button>
+                <button class="btn btn-danger" onclick="leaveGame()" style="width:100%;">ABBANDONA</button>
+            </div>
+        </div>
+
+        <div id="history-btn-container" class="sidebar-section hidden" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+            <button class="btn btn-gold" onclick="toggleHistoryModal()">📜 VEDI STORICO</button>
+        </div>
+    </div>
+</div>
+
+<div id="custom-alert" class="overlay hidden" style="z-index: 10000;">
+    <div class="modal" style="width: 400px; max-width:90%; padding: 25px; border-color: var(--gold); box-shadow: 0 0 50px black;">
+        <h3 style="color:var(--gold); margin-top:0; text-transform: uppercase;">Avviso</h3>
+        <p id="custom-alert-msg" style="margin: 20px 0; font-size: 1.1em; color: #ddd;"></p>
+        <button class="btn btn-primary" onclick="closeCustomAlert()" style="width: 100px;">OK</button>
+    </div>
+</div>
+
+<div id="custom-confirm" class="overlay hidden" style="z-index: 10000;">
+    <div class="modal" style="width: 450px; max-width:90%; padding: 25px; border-color: var(--gold); box-shadow: 0 0 50px black;">
+        <h3 style="color:var(--gold); margin-top:0; text-transform: uppercase;">Conferma Azione</h3>
+        <p id="custom-confirm-msg" style="margin: 20px 0; font-size: 1.1em; color: #ddd;"></p>
+        <div style="display:flex; justify-content: center; gap: 15px;">
+            <button id="confirm-yes-btn" class="btn btn-danger" style="min-width: 100px;">Rimuovi</button>
+            <button class="btn btn-primary" onclick="closeCustomConfirm()" style="min-width: 100px;">Annulla</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let ws, myName, currentRoom, isCreator = false;
+    let currentState = null;
+    let animationState = { active: false, cards: [], winner: null };
+    let lastTricksCompleted = -1;
+
+    function toggleSidebar() {
+        const sb = document.getElementById('sidebar');
+        sb.classList.toggle('mobile-visible');
+        const btn = sb.querySelector('.mobile-only-btn');
+        if(window.innerWidth <= 850) btn.classList.remove('hidden');
+    }
+
+    /* FUNZIONE PER APRIRE LO STORICO */
+    function toggleHistoryModal() {
+        document.getElementById('history-overlay').classList.toggle('hidden');
+    }
+
+    async function createRoom() {
+        const n = document.getElementById('nick').value.trim();
+        if(!n) return alert("Inserisci nome");
+        try {
+            const res = await fetch('/create_room');
+            const data = await res.json();
+            connect(data.room_id, n);
+        } catch(e) { alert("Errore server"); }
+    }
+    function joinRoom() {
+        const n = document.getElementById('nick').value.trim();
+        // CONTROLLO NOME
+        if (n.toLowerCase().startsWith("bot_")) {
+        alert("Non puoi usare un nome che inizia con 'bot_'! È riservato.");
+        return;
+    }
+        const c = document.getElementById('room-code').value.trim().toUpperCase();
+        if(!n || !c) return alert("Dati mancanti");
+        connect(c, n);
+    }
+    function connect(rid, nick) {
+        myName = nick; currentRoom = rid;
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        ws = new WebSocket(`${protocol}//${location.host}/ws/${rid}/${nick}`);
+
+        setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({action: 'ping'}));
+        }, 10000);
+
+        ws.onopen = () => {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('mobile-menu-btn').classList.remove('hidden');
+            const menuBtn = document.getElementById('mobile-menu-btn');
+            if(window.innerWidth <= 850) menuBtn.style.display = 'block';
+        };
+        ws.onmessage = e => {
+            const data = JSON.parse(e.data);
+            if(data.error) showToast(data.error);
+            else render(data);
+        };
+        ws.onerror = () => alert("Errore conn.");
+        ws.onclose = (e) => {
+        // Codice 1008 è usato sia per "Lobby Piena" sia per "Kick"
+        if(e.code === 1008) {
+            // Se il server ci ha mandato un motivo specifico (es. "Sei stato rimosso..."), usiamo quello.
+            // Se il motivo è vuoto, allora assumiamo che fosse "Lobby piena".
+            const message = e.reason ? e.reason : "Lobby piena";
+            showCustomAlert(message);
+        } else {
+            // showCustomAlert("Connessione interrotta."); // Opzionale per altri errori
+        }
+    };
+    }
+
+    function render(s) {
+        currentState = s;
+        isCreator = s.is_creator;
+
+        document.getElementById('room-display').innerHTML = `<strong>CODICE:</strong> ${s.room_id}`;
+        document.getElementById('round-val').innerText = s.round_num || 0;
+
+        if(s.state === 'LOBBY') {
+            document.getElementById('history-btn-container').classList.add('hidden');
+            renderLobby(s);
+        } else {
+            document.getElementById('lobby-controls').classList.add('hidden');
+            document.getElementById('history-btn-container').classList.remove('hidden');
+            renderGame(s);
+        }
+    }
+
+function renderLobby(s) {
+    document.getElementById('lobby-controls').classList.remove('hidden');
+    document.getElementById('sidebar-chat-section').classList.add('hidden');
+    document.querySelector('.trump-zone').classList.add('hidden');
+    document.querySelector('.round-title').classList.add('hidden');
+
+    const config = s.config || {};
+    const configured = config.configured || false;
+    const maxPlayers = config.max_players || 6;
+
+    // --- LOGICA BOTTONE BOT ---
+    const botBtn = document.getElementById('add-bot-btn');
+    // Mostra SOLO se sei creatore E c'è spazio
+    if (isCreator && s.players.length < maxPlayers) {
+        botBtn.classList.remove('hidden');
+    } else {
+        botBtn.classList.add('hidden');
+    }
+    // --------------------------
+
+    document.getElementById('config-panel').classList.toggle('hidden', !(isCreator && !configured));
+    if(isCreator && !configured) { initRoundSelector(); updateRoundLimits(); }
+
+    const readyPanel = document.getElementById('ready-panel');
+    readyPanel.classList.toggle('hidden', !configured);
+
+if(configured) {
+        const playerCountElem = document.getElementById('player-count-msg');
+        const count = s.players.length;
+        const max = config.max_players;
+
+        // Aggiorna il testo
+        playerCountElem.innerText = `${count} / ${max} GIOCATORI`;
+
+        // Logica colori e visibilità bottone
+        const startBtn = document.getElementById('start-btn');
+
+        if (count > max) {
+            // TROPPI GIOCATORI
+            playerCountElem.style.color = '#ff4444'; // Rosso
+            playerCountElem.innerText += " (Limite superato!)";
+            startBtn.classList.add('hidden'); // Nascondi tasto avvio
+        } else if (count < 3) { // Minimo 3 giocatori per Wizard (o 2 se vuoi permetterlo)
+            // POCHI GIOCATORI
+            playerCountElem.style.color = '#aaa';
+            startBtn.classList.add('hidden');
+        } else {
+            // NUMERO GIUSTO ( <= max e >= 3)
+            playerCountElem.style.color = '#4caf50'; // Verde
+            // Mostra il tasto solo se sono il creatore
+            if (isCreator) {
+                startBtn.classList.remove('hidden');
+            } else {
+                startBtn.classList.add('hidden');
+            }
+        }
+    }
+
+document.getElementById('player-list').innerHTML = s.players.map(p => {
+        let kickButton = '';
+
+        // MOSTRA IL TASTO KICK SE:
+        // 1. Io sono il creatore (isCreator è true)
+        // 2. Il giocatore nella lista NON sono io (p.name !== myName)
+        if (isCreator && p.name !== myName) {
+            kickButton = `<button class="kick-btn" onclick="kickPlayer('${p.name}')" title="Espelli giocatore">×</button>`;
+        }
+
+        return `<div class="player-list-item">
+                    <span>${p.name}${p.name===s.creator?' 👑':''}</span>
+                    ${kickButton}
+                </div>`;
+    }).join('');
+
+    let centralText = isCreator ? (configured ? 'PRONTO AD AVVIARE' : 'CONFIGURAZIONE...') : "IN ATTESA DELL'HOST";
+    document.getElementById('table-center').innerHTML = `<div style="color:rgba(255,255,255,0.3); text-align:center; font-weight:bold; font-size: 1.2em;">${centralText}</div>`;
+}
+
+    function renderGame(s) {
+        // MOSTRA CHAT IN GAME
+        document.getElementById('sidebar-chat-section').classList.remove('hidden');
+
+        // MOSTRA BRISCOLA E ROUND IN GAME
+        document.querySelector('.trump-zone').classList.remove('hidden');
+        document.querySelector('.round-title').classList.remove('hidden');
+
+        const turnInd = document.getElementById('turn-indicator');
+        if(s.current_turn && ['BIDDING','PLAYING'].includes(s.state)) {
+            turnInd.innerText = `TOCCA A: ${s.current_turn}`;
+            turnInd.classList.remove('hidden');
+        } else turnInd.classList.add('hidden');
+
+        // NASCONDI PULSANTE BOT
+        document.getElementById('add-bot-btn').classList.add('hidden');
+
+        // GESTIONE BRISCOLA WIZARD
+        const isPickingTrump = (s.state === 'WAITING_FOR_DEALER_TRUMP' && s.current_turn === myName);
+        const overlay = document.getElementById('choice-overlay');
+        overlay.classList.toggle('hidden', !isPickingTrump);
+
+        const body = document.body;
+        if(isPickingTrump) body.classList.add('picking-trump-mode');
+        else body.classList.remove('picking-trump-mode');
+
+        const trumpDiv = document.getElementById('trump-content');
+        if(s.trump_card) trumpDiv.innerHTML = `<img src="/static/cards/${fn(s.trump_card)}" class="trump-img">`;
+        else if(s.trump_suit) {
+             const color = (s.trump_suit === 'CUORI' || s.trump_suit === 'QUADRI') ? '#e53935' : '#e0e0e0';
+             trumpDiv.innerHTML = `<div class="trump-suit-big" style="color:${color}">${getSuitIcon(s.trump_suit)}</div>`;
+        } else trumpDiv.innerHTML = '<span style="color:#aaa; font-size:0.7em;">NESSUNA</span>';
+
+        const openDiv = document.getElementById('open-cards-display');
+        const showOpen = s.config.first_round_open_cards && s.round_num === s.selected_rounds[0] && s.state === 'BIDDING';
+        openDiv.classList.toggle('hidden', !showOpen);
+        if(showOpen) {
+            openDiv.innerHTML = `
+                <div class="open-cards-title">CARTE AVVERSARI</div>
+                ${s.players.filter(p => p.name !== myName).map(p => `
+                    <div class="open-card-player">
+                        <h5>${p.name}</h5>
+                        ${(p.hand||[]).map(c=>`<img src="/static/cards/${fn(c)}" class="open-card-img">`).join('')}
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // --- ANIMAZIONE NUOVA MANO ---
+        const currentTricksCount = s.tricks_completed || 0;
+        if(s.state === 'BIDDING') lastTricksCompleted = -1;
+
+        if (lastTricksCompleted === -1) {
+            lastTricksCompleted = currentTricksCount;
+        }
+        else if (currentTricksCount > lastTricksCompleted) {
+            lastTricksCompleted = currentTricksCount;
+            animationState.active = true;
+            animationState.cards = s.last_trick_cards || [];
+            animationState.winner = s.last_trick_winner;
+
+            setTimeout(() => {
+                if(animationState.winner) showTrickWinner(animationState.winner);
+            }, 2000);
+
+            setTimeout(() => {
+                animationState.active = false;
+                render(currentState);
+                if (s.game_finished) showGameOver(s);
+                else if (s.state === 'FINISHED') showRoundResults(s);
+            }, 4500);
+        }
+
+        // RENDER TAVOLO
+        let cardsToDisplay = [];
+        if (animationState.active && animationState.cards.length > 0) {
+            cardsToDisplay = animationState.cards;
+        } else {
+            cardsToDisplay = s.table_cards || [];
+        }
+
+        document.getElementById('table-center').innerHTML = cardsToDisplay.map(c => `
+            <div class="table-card-container"><img src="/static/cards/${fn(c)}" class="card on-table"><small>${c.played_by || ''}</small></div>
+        `).join('');
+
+        const bidControls = document.getElementById('bid-controls');
+        if(s.state === 'BIDDING' && s.current_turn === myName) {
+            bidControls.classList.remove('hidden');
+            let btns = `<div class="bid-grid">`;
+            for(let i=0; i<=s.cards_to_deal; i++) btns += `<button class="bid-btn" onclick="send('make_bid',{bid:${i}})">${i}</button>`;
+            bidControls.innerHTML = `<b style="color:var(--gold); display:block; margin-bottom:10px;">QUANTE PRESE FARAI?</b>` + btns + `</div>`;
+        } else bidControls.classList.add('hidden');
+
+        // RENDER MANO
+        const handDiv = document.getElementById('hand');
+        handDiv.innerHTML = '';
+        if (animationState.active) handDiv.classList.add('blocked-hand');
+        else handDiv.classList.remove('blocked-hand');
+
+        const me = s.players.find(p => p.name === myName);
+        if(me && me.hand) {
+            me.hand.forEach (c => {
+                const img = document.createElement('img');
+                img.src = `/static/cards/${fn(c)}`;
+                img.className = 'card hand-card';
+                const canPlay = s.state === 'PLAYING' && s.current_turn === myName && !animationState.active;
+                if(canPlay) img.onclick = () => send('play_card', {card:c});
+                else img.style.cursor = 'default';
+                if(!canPlay) img.style.filter = "brightness(0.7)";
+                handDiv.appendChild(img);
+            });
+        }
+
+        // AGGIORNAMENTO LISTA GIOCATORI CON NUOVO LAYOUT COMPATTO
+        document.getElementById('player-list').innerHTML = s.players.map(p => {
+            const isMe = p.name === s.current_turn;
+            const pred = p.prediction !== null ? p.prediction : '-';
+
+            return `
+            <div class="player-list-item ${isMe ? 'active' : ''}">
+                <div class="p-name">${p.name}</div>
+                <div class="p-stats">
+                     <div class="p-stat"><span>PRESE</span><span>${p.tricks_won}/${pred}</span></div>
+                     <div class="p-stat"><span>PUNTI</span><span style="color:var(--gold)">${p.score}</span></div>
+                </div>
+            </div>`;
+        }).join('');
+
+        renderChat(s.chat || []);
+        updateHistory(s);
+
+        if(animationState.active) {
+            document.getElementById('round-results-overlay').classList.add('hidden');
+            return;
+        }
+
+        if(s.game_finished) { showGameOver(s); return; }
+
+        const resOverlay = document.getElementById('round-results-overlay');
+        if(s.state === 'FINISHED') {
+            showRoundResults(s);
+            resOverlay.classList.remove('hidden');
+        } else {
+            resOverlay.classList.add('hidden');
+        }
+    }
+
+    function showTrickWinner(w) {
+        const n = document.getElementById('trick-winner-notification');
+        n.innerHTML = `🏆 MANO A <b>${w}</b>`;
+        n.classList.remove('hidden');
+        setTimeout(() => n.classList.add('hidden'), 2500);
+    }
+
+    function closeCustomAlert() {
+    document.getElementById('custom-alert').classList.add('hidden');
+}
+
+let confirmCallback = null;
+
+function showCustomConfirm(msg, callback) {
+    document.getElementById('custom-confirm-msg').innerText = msg;
+    confirmCallback = callback;
+    document.getElementById('custom-confirm').classList.remove('hidden');
+}
+
+function closeCustomConfirm() {
+    confirmCallback = null;
+    document.getElementById('custom-confirm').classList.add('hidden');
+}
+
+// Collega il tasto "Rimuovi" del popup
+document.getElementById('confirm-yes-btn').onclick = () => {
+    if (confirmCallback) confirmCallback();
+    closeCustomConfirm();
+};
+
+    function showCustomAlert(msg) {
+    document.getElementById('custom-alert-msg').innerText = msg;
+    document.getElementById('custom-alert').classList.remove('hidden');
+}
+
+function kickPlayer(targetName) {
+    // Usa il nuovo popup di conferma invece del confirm() nativo
+    showCustomConfirm(`Sei sicuro di voler rimuovere ${targetName} dalla partita?`, () => {
+        send('kick_player', { target: targetName });
+    });
+}
+
+    function showRoundResults(s) {
+        document.getElementById('round-results-num').innerText = s.round_num;
+        const btn = document.getElementById('continue-btn');
+        if (s.game_finished) {
+            btn.innerText = "🏆 VEDI PODIO FINALE";
+            btn.onclick = () => showGameOver(s);
+            btn.disabled = false;
+            btn.style.background = "#ffcc00"; btn.style.color = "black";
+        } else {
+            btn.innerText = isCreator ? "AVVIA PROSSIMO ROUND ▶️" : "In attesa dell'host...";
+            btn.onclick = () => confirmRoundEnd();
+            btn.disabled = !isCreator;
+            btn.style.background = isCreator ? "#43a047" : "#333"; btn.style.color = "white";
+        }
+
+        let html = '<table class="history-table"><thead><tr><th>ROUND</th>';
+        s.players.forEach(p => {
+            html += `<th>${p.name}</th>`;
+        });
+        html += '</tr></thead><tbody>';
+
+        // SOLO IL ROUND CORRENTE
+        const match = s.players.map(p => {
+            const ok = p.prediction === p.tricks_won;
+            let pts = ok ? 20 + (p.tricks_won*10) : -(Math.abs(p.tricks_won - (p.prediction||0))*10);
+            return {name: p.name, points: pts};
+        });
+
+        html += `<tr><td><b>${s.round_num}</b></td>`;
+        s.players.forEach(p => {
+             const m = match.find(x => x.name === p.name);
+             html += `<td style="color:${m.points>=0?'#4f4':'#f44'}"><b>${m.points}</b></td>`;
+        });
+        html += '</tr></tbody></table>';
+
+        document.getElementById('round-results-content').innerHTML = html;
+    }
+
+    function showGameOver(s) {
+        document.getElementById('round-results-overlay').classList.add('hidden');
+        const sorted = [...s.players].sort((a,b) => b.score - a.score);
+        document.getElementById('podium-content').innerHTML = sorted.map((p,i) => `
+            <div class="podium-item ${i===0?'winner':''}"><span>${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':'# '+(i+1)))} ${p.name}</span><span>${p.score}</span></div>
+        `).join('');
+        document.getElementById('final-history-container').innerHTML = document.getElementById('history-container').innerHTML;
+        document.getElementById('game-over-overlay').classList.remove('hidden');
+    }
+
+    function showToast(msg) {
+        const c = document.getElementById('toast-container');
+        c.innerHTML = '';
+        const t = document.createElement('div');
+        t.className = 'toast-error';
+        t.innerHTML = `<span>🚫</span><span>${msg}</span>`;
+        c.appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; setTimeout(() => { if(t.parentNode) t.parentNode.removeChild(t); }, 300); }, 4000);
+    }
+
+    function updateHistory(s) {
+        const c = document.getElementById('history-container');
+        if(!s.round_history || !s.round_history.length) { c.innerHTML = '<p style="text-align:center; opacity:0.5; margin-top:20px;">Nessun dato</p>'; return; }
+
+        let h = '<table class="history-table"><thead><tr><th>ROUND</th>' +
+            s.round_history[0].players_data.map(p =>
+                `<th>${p.name}</th>`
+            ).join('') +
+            '</tr></thead><tbody>';
+
+        s.round_history.forEach(r => {
+            h += `<tr><td><b>${r.round_num}</b></td>` +
+                 r.players_data.map(p => {
+                     const color = p.prediction === p.tricks_won ? '#4f4' : '#f44';
+                     return `<td>
+                        <div style="font-size:0.85em; opacity:0.7; margin-bottom:2px; color:${color}">${p.tricks_won}/${p.prediction}</div>
+                        <div style="font-size:1em; color:#fff; font-weight:bold;">${p.score}</div>
+                     </td>`;
+                 }).join('') +
+                 '</tr>';
+        });
+        c.innerHTML = h + '</tbody></table>';
+    }
+
+    function initRoundSelector() {
+        const container = document.getElementById('rounds-selector');
+        if(container.children.length > 0) return;
+        for(let i=1; i<=20; i++) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'round-check-wrapper';
+            wrapper.innerHTML = `
+                <input type="checkbox" id="round-${i}" value="${i}" class="round-check-input" onchange="updateSelectedRounds()">
+                <label for="round-${i}" class="round-check-label">${i}</label>
+            `;
+            container.appendChild(wrapper);
+        }
+        for(let i=1; i<=10; i++) { document.getElementById(`round-${i}`).checked = true; }
+        updateSelectedRounds();
+    }
+    function updateRoundLimits() {
+        const maxRounds = Math.floor(60 / parseInt(document.getElementById('max-players').value));
+        for(let i=1; i<=20; i++) {
+            const cb = document.getElementById(`round-${i}`);
+            cb.disabled = i > maxRounds;
+            if(i > maxRounds) cb.checked = false;
+        }
+        updateSelectedRounds();
+    }
+    function selectAllRounds() { for(let i=1; i<=20; i++) { let c=document.getElementById(`round-${i}`); if(c && !c.disabled) c.checked=true; } updateSelectedRounds(); }
+    function deselectAllRounds() { for(let i=1; i<=20; i++) { let c=document.getElementById(`round-${i}`); if(c) c.checked=false; } updateSelectedRounds(); }
+
+    let selRounds=[];
+    function updateSelectedRounds() {
+        selRounds=[]; for(let i=1;i<=20;i++){ let c=document.getElementById(`round-${i}`); if(c&&c.checked) selRounds.push(i); }
+        const oc = document.getElementById('open-cards');
+        const hasRound1 = selRounds.includes(1);
+        oc.disabled = !hasRound1;
+        if (!hasRound1) oc.checked = false;
+    }
+
+    function confirmRoundEnd() { if(isCreator) send('start_next_round',{}); }
+    function saveConfig() { updateSelectedRounds(); send('configure_lobby', { max_players: parseInt(document.getElementById('max-players').value), selected_rounds: selRounds, first_round_open_cards: document.getElementById('open-cards').checked }); }
+    function leaveGame() { if(confirm('Esci?')) { send('leave_game',{}); location.reload(); } }
+    function getSuitIcon(s) { return s==='CUORI'?'♥️':s==='QUADRI'?'♦️':s==='FIORI'?'♣️':'♠️'; }
+
+    function fn(c) {
+        if(!c||c.type==='BACK') return 'BACK.png';
+        if(c.type==='WIZARD') return `WIZARD_${c.id}.png`;
+        if(c.type==='JESTER') return `JESTER_${c.id}.png`;
+        return `${c.suit}_${c.value}.png`;
+    }
+    function send(a,d) { if(ws&&ws.readyState===1) ws.send(JSON.stringify({action:a, ...d})); }
+
+    // --- LOGICHE CHAT ---
+    let lastChatLen = 0;
+
+    function renderChat(messages) {
+        const container = document.getElementById('chat-messages');
+        if (messages.length === lastChatLen && container.innerHTML !== "") return;
+
+        lastChatLen = messages.length;
+
+        const html = messages.map(m => {
+            const isMe = m.sender === myName;
+            return `
+                <div class="chat-msg ${isMe ? 'mine' : 'theirs'}">
+                    ${!isMe ? `<span class="chat-sender">${m.sender}</span>` : ''}
+                    ${escapeHtml(m.text)}
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = html;
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function sendChat() {
+        const inp = document.getElementById('chat-input');
+        const txt = inp.value.trim();
+        if(!txt) return;
+
+        console.log("[CLIENT] Invio messaggio:", txt);
+        send('chat_message', { message: txt });
+        inp.value = '';
+        inp.focus();
+    }
+
+    function escapeHtml(text) {
+        if (!text) return text;
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    document.getElementById('add-bot-btn').addEventListener('click', () => {
+    const displayElement = document.getElementById('room-display');
+    const testoGrezzo = displayElement.innerText;
+    const roomCode = testoGrezzo.replace('CODICE:', '').trim().toUpperCase();
+    console.log("Codice estratto per il Bot:", roomCode); // Debug per essere sicuri
+    if (roomCode) {
+        fetch(`/${roomCode}/add_bot`, { method: 'POST' })
+            .then(res => {
+                if(res.ok) console.log("Richiesta inviata con successo");
+                else console.error("Errore dal server:", res.status);
+            });
+    } else {
+        alert("Errore: Codice stanza non trovato!");
+    }
+});
+
+</script>
+</body>
+</html>
