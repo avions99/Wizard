@@ -876,12 +876,47 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
         if(isPickingTrump) body.classList.add('picking-trump-mode');
         else body.classList.remove('picking-trump-mode');
 
+        // GESTIONE BRISCOLA (LOGICA CORRETTA PER WIZARD)
         const trumpDiv = document.getElementById('trump-content');
-        if(s.trump_card) trumpDiv.innerHTML = `<img src="/static/cards/${fn(s.trump_card)}" class="trump-img">`;
+
+        // 1. Cerchiamo qual è il seme valido da mostrare
+        let suitToShow = null;
+
+        if (s.trump_card && s.trump_card.suit && s.trump_card.suit !== 'NESSUNO') {
+            // Caso A: La carta ha il suo seme (es. 5 di Cuori)
+            suitToShow = s.trump_card.suit;
+        } else if (s.trump_suit && s.trump_suit !== 'NESSUNO') {
+            // Caso B: La carta non ha seme (Wizard), ma il mazziere l'ha scelto
+            suitToShow = s.trump_suit;
+        }
+
+        // 2. Renderizziamo
+        if(s.trump_card) {
+            // C'è una carta fisica (Numero, Wizard o Jester)
+            let iconHtml = '';
+
+            // Se abbiamo trovato un seme valido (dalla carta o dalla scelta), mostriamo l'icona
+            if(suitToShow) {
+                const color = (suitToShow === 'CUORI' || suitToShow === 'QUADRI') ? '#ff5555' : '#ffffff';
+                iconHtml = `<div style="font-size: 2.5em; line-height: 1; margin-left: 8px; color: ${color}; text-shadow: 0 2px 5px black;">
+                                ${getSuitIcon(suitToShow)}
+                            </div>`;
+            }
+
+            trumpDiv.innerHTML = `
+                <div style="display:flex; align-items:center; justify-content:center;">
+                    <img src="/static/cards/${fn(s.trump_card)}" class="trump-img">
+                    ${iconHtml}
+                </div>`;
+        }
         else if(s.trump_suit) {
+             // Caso di fallback: Solo seme senza carta fisica (raro, ma gestito)
              const color = (s.trump_suit === 'CUORI' || s.trump_suit === 'QUADRI') ? '#e53935' : '#e0e0e0';
              trumpDiv.innerHTML = `<div class="trump-suit-big" style="color:${color}">${getSuitIcon(s.trump_suit)}</div>`;
-        } else trumpDiv.innerHTML = '<span style="color:#aaa; font-size:0.7em;">NESSUNA</span>';
+        }
+        else {
+            trumpDiv.innerHTML = '<span style="color:#aaa; font-size:0.7em;">NESSUNA</span>';
+        }
 
         const openDiv = document.getElementById('open-cards-display');
         const showOpen = s.config.first_round_open_cards && s.round_num === s.selected_rounds[0] && s.state === 'BIDDING';
