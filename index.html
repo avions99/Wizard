@@ -1112,12 +1112,47 @@ function kickPlayer(targetName) {
         document.getElementById('round-results-content').innerHTML = html;
     }
 
-    function showGameOver(s) {
+function showGameOver(s) {
         document.getElementById('round-results-overlay').classList.add('hidden');
+
+        // 1. Ordina per punteggio (dal più alto al più basso)
         const sorted = [...s.players].sort((a,b) => b.score - a.score);
-        document.getElementById('podium-content').innerHTML = sorted.map((p,i) => `
-            <div class="podium-item ${i===0?'winner':''}"><span>${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':'# '+(i+1)))} ${p.name}</span><span>${p.score}</span></div>
-        `).join('');
+
+        // 2. Variabile per tracciare la posizione reale
+        let currentRank = 1;
+
+        document.getElementById('podium-content').innerHTML = sorted.map((p, i) => {
+            // Se NON è il primo giocatore, controlliamo il punteggio rispetto a quello prima
+            if (i > 0) {
+                const prevScore = sorted[i-1].score;
+                // Se il punteggio è INFERIORE al precedente, la posizione diventa l'indice attuale + 1
+                // (Esempio: 1°, 1°, 3°)
+                if (p.score < prevScore) {
+                    currentRank = i + 1;
+                }
+                // Se il punteggio è UGUALE, currentRank non cambia (resta uguale al precedente)
+            } else {
+                currentRank = 1; // Il primo della lista è sempre 1°
+            }
+
+            // 3. Decidi l'icona in base al currentRank (non all'indice i)
+            let rankIcon = '';
+            if (currentRank === 1) rankIcon = '🥇';
+            else if (currentRank === 2) rankIcon = '🥈';
+            else if (currentRank === 3) rankIcon = '🥉';
+            else rankIcon = '# ' + currentRank;
+
+            // 4. Se è primo (anche a pari merito), diamo lo stile speciale
+            const cssClass = (currentRank === 1) ? 'podium-item winner' : 'podium-item';
+
+            return `
+                <div class="${cssClass}">
+                    <span>${rankIcon} ${p.name}</span>
+                    <span>${p.score}</span>
+                </div>
+            `;
+        }).join('');
+
         document.getElementById('final-history-container').innerHTML = document.getElementById('history-container').innerHTML;
         document.getElementById('game-over-overlay').classList.remove('hidden');
     }
