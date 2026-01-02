@@ -555,8 +555,8 @@
                 <div id="final-history-container" class="no-scrollbar"></div>
             </div>
         </div>
-        <button class="btn btn-primary" onclick="send('leave_game',{}); location.reload();" style="margin-top:25px; width:100%;">TORNA ALLA LOBBY</button>
-    </div>
+    <button class="btn btn-primary" onclick="fullExit()" style="margin-top:25px; width:100%;">TORNA ALLA LOBBY</button>
+     </div>
 </div>
 
 <div class="toast-container" id="toast-container"></div>
@@ -709,51 +709,93 @@
             connect(data.room_id, n);
         } catch(e) { alert("Errore server"); }
     }
-    function joinRoom() {
-        const n = document.getElementById('nick').value.trim();
-        // CONTROLLO NOME
-        if (n.toLowerCase().startsWith("bot_")) {
-        alert("Non puoi usare un nome che inizia con 'bot_'! È riservato.");
+
+function joinRoom() {
+    const nameInput = document.getElementById('nick');
+    const roomInput = document.getElementById('room-code');
+
+    // Convertiamo in maiuscolo e togliamo gli spazi
+    const name = nameInput.value.trim().toUpperCase();
+    const room = roomInput.value.trim();
+
+    if (!name || !room) {
+        if(typeof showCustomAlert === 'function') showCustomAlert("Inserisci nome e codice stanza");
+        else alert("Inserisci nome e codice stanza");
         return;
     }
-        const c = document.getElementById('room-code').value.trim().toUpperCase();
-        if(!n || !c) return alert("Dati mancanti");
-        connect(c, n);
+    // Passa i dati alla connessione
+    connect(room, name);
+}
+
+function connect(rid, nick) {
+    // 1. Aggiorna variabili globali
+    myName = nick;
+    currentRoom = rid;
+
+    // 2. SALVA DATI (Per ricollegarsi se si blocca lo schermo)
+    localStorage.setItem('wizard_player_name', nick);
+    localStorage.setItem('wizard_room_code', rid);
+
+    // 3. Configura WebSocket
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+    // Chiude vecchie connessioni se presenti
+    if (ws) {
+        ws.onclose = null;
+        ws.close();
     }
-    function connect(rid, nick) {
-        myName = nick; currentRoom = rid;
-        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        ws = new WebSocket(`${protocol}//${location.host}/ws/${rid}/${nick}`);
 
-        setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({action: 'ping'}));
-        }, 10000);
+    ws = new WebSocket(`${protocol}//${location.host}/ws/${rid}/${nick}`);
 
-        ws.onopen = () => {
-            document.getElementById('start-screen').classList.add('hidden');
-            document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('mobile-menu-btn').classList.remove('hidden');
-            const menuBtn = document.getElementById('mobile-menu-btn');
-            if(window.innerWidth <= 850) menuBtn.style.display = 'block';
-        };
-        ws.onmessage = e => {
-            const data = JSON.parse(e.data);
-            if(data.error) showToast(data.error);
-            else render(data);
-        };
-        ws.onerror = () => alert("Errore conn.");
-        ws.onclose = (e) => {
-        // Codice 1008 è usato sia per "Lobby Piena" sia per "Kick"
+    // 4. Ping (Keep-alive)
+    if (window.pingInterval) clearInterval(window.pingInterval);
+    window.pingInterval = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({action: 'ping'}));
+    }, 10000);
+
+    // --- EVENTI ---
+
+    ws.onopen = () => {
+        // Nascondiamo il login e mostriamo il gioco
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+
+        // Gestione menu mobile
+        const menuBtn = document.getElementById('mobile-menu-btn');
+        menuBtn.classList.remove('hidden');
+        if(window.innerWidth <= 850) menuBtn.style.display = 'block';
+    };
+
+    ws.onmessage = e => {
+        const data = JSON.parse(e.data);
+        if(data.error) showCustomAlert(data.error); // Usa alert custom
+        else render(data);
+    };
+
+    ws.onerror = () => {
+        console.error("Errore WebSocket");
+    };
+
+    ws.onclose = (e) => {
+        // Codice 1008 = Cacciato o Lobby Piena
         if(e.code === 1008) {
-            // Se il server ci ha mandato un motivo specifico (es. "Sei stato rimosso..."), usiamo quello.
-            // Se il motivo è vuoto, allora assumiamo che fosse "Lobby piena".
+            // CANCELLA memoria: non deve riconnettersi in automatico
+            localStorage.removeItem('wizard_player_name');
+            localStorage.removeItem('wizard_room_code');
+
             const message = e.reason ? e.reason : "Lobby piena";
             showCustomAlert(message);
         } else {
-            // showCustomAlert("Connessione interrotta."); // Opzionale per altri errori
+            // Se cade la linea per errore (es. blocco schermo), NON cancelliamo i dati.
+            // Così l'auto-reconnect potrà funzionare.
         }
+
+        // Reset Interfaccia
+        document.getElementById('start-screen').classList.remove('hidden');
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('mobile-menu-btn').classList.add('hidden');
     };
-    }
+}
 
     function render(s) {
         currentState = s;
@@ -773,6 +815,10 @@
     }
 
 function renderLobby(s) {
+    // PULIZIA VISIVA FORZATA
+    document.getElementById('hand').innerHTML = ''; // Cancella le carte in mano
+    document.getElementById('trump-content').innerHTML = ''; // Cancella la briscola
+
     document.getElementById('lobby-controls').classList.remove('hidden');
     document.getElementById('sidebar-chat-section').classList.add('hidden');
     document.querySelector('.trump-zone').classList.add('hidden');
@@ -1229,7 +1275,6 @@ function showGameOver(s) {
 
     function confirmRoundEnd() { if(isCreator) send('start_next_round',{}); }
     function saveConfig() { updateSelectedRounds(); send('configure_lobby', { max_players: parseInt(document.getElementById('max-players').value), selected_rounds: selRounds, first_round_open_cards: document.getElementById('open-cards').checked }); }
-    function leaveGame() { if(confirm('Esci?')) { send('leave_game',{}); location.reload(); } }
     function getSuitIcon(s) { return s==='CUORI'?'♥️':s==='QUADRI'?'♦️':s==='FIORI'?'♣️':'♠️'; }
 
     function fn(c) {
@@ -1299,6 +1344,62 @@ function showGameOver(s) {
         alert("Errore: Codice stanza non trovato!");
     }
 });
+// --- PARTE 1: AUTO-LOGIN AL CARICAMENTO PAGINA ---
+    window.addEventListener('load', () => {
+        const savedName = localStorage.getItem('wizard_player_name');
+        const savedRoom = localStorage.getItem('wizard_room_code');
+
+        if (savedName && savedRoom) {
+            // Usa gli ID corretti del tuo HTML ('nick' e 'room-code')
+            const nInput = document.getElementById('nick');
+            const rInput = document.getElementById('room-code');
+
+            // Riempie i campi visivamente se esistono
+            if(nInput) nInput.value = savedName;
+            if(rInput) rInput.value = savedRoom;
+
+            console.log("Sessione trovata, riconnessione...");
+            // Ritardo minimo per sicurezza
+            setTimeout(() => connect(savedRoom, savedName), 100);
+        }
+    });
+
+    // --- PARTE 2: RISVEGLIO DOPO BLOCCO SCHERMO (Indipendente) ---
+    document.addEventListener('visibilitychange', () => {
+        // Se la pagina torna visibile (sblocco telefono o cambio scheda)
+        if (document.visibilityState === 'visible') {
+            const savedName = localStorage.getItem('wizard_player_name');
+            const savedRoom = localStorage.getItem('wizard_room_code');
+
+            // Se ho dati salvati MA non sono connesso (socket chiuso o inesistente)
+            if (savedName && savedRoom && (!ws || ws.readyState !== WebSocket.OPEN)) {
+                console.log("📱 App risvegliata, tentativo di riconnessione rapida...");
+                connect(savedRoom, savedName);
+            }
+        }
+    });
+
+    // --- FUNZIONI DI USCITA ---
+
+    // Questa funzione cancella tutto e ricarica (per il pulsante a fine partita)
+    function fullExit() {
+        // 1. Avvisa il server
+        send('leave_game', {});
+
+        // 2. CANCELLA LA MEMORIA
+        localStorage.removeItem('wizard_player_name');
+        localStorage.removeItem('wizard_room_code');
+
+        // 3. Pulisce l'URL e ricarica alla home
+        window.location.href = window.location.origin;
+    }
+
+    // Funzione per il tasto "Abbandona" durante il gioco
+    function leaveGame() {
+        if(confirm('Sei sicuro di voler uscire?')) {
+            fullExit();
+        }
+    }
 
 </script>
 </body>
