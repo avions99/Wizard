@@ -169,7 +169,7 @@ class Round:
         ai = MonteCarloBot(player.name, self)
 
         # Usa Monte Carlo per scegliere la carta migliore
-        best_card = ai.choose_best_card(simulations=500)
+        best_card = ai.choose_best_card(simulations=100)
 
         return best_card.to_dict()
 
