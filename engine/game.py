@@ -86,10 +86,12 @@ class Game:
 
         next_round_num = self.selected_rounds[self.current_round_index]
         cards_to_deal = next_round_num
+        # Calcola se siamo nel modo carte scoperte
+        is_open_mode = (self.first_round_open_cards and self.current_round_index == 0)
         print(
             f"[GAME] Creazione round {next_round_num} ({self.current_round_index + 1}/{len(self.selected_rounds)}) con {cards_to_deal} carte")
         from engine.round import Round
-        new_round = Round(self.players, cards_to_deal, self.dealer_index)
+        new_round = Round(self.players, cards_to_deal, self.dealer_index, open_cards_mode=is_open_mode)
         self.rounds.append(new_round)
 
         new_round.setup()
