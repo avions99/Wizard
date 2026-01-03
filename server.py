@@ -7,7 +7,8 @@ import engine.game
 
 importlib.reload(engine.game)
 from engine.game import Game
-from engine.enums import RoundState, Suit
+from engine.enums import RoundState
+from engine.card import Suit
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

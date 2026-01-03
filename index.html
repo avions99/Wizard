@@ -715,8 +715,8 @@ function joinRoom() {
     const roomInput = document.getElementById('room-code');
 
     // Convertiamo in maiuscolo e togliamo gli spazi
-    const name = nameInput.value.trim().toUpperCase();
-    const room = roomInput.value.trim();
+    const name = nameInput.value.trim();
+    const room = roomInput.value.trim().toUpperCase();
 
     if (!name || !room) {
         if(typeof showCustomAlert === 'function') showCustomAlert("Inserisci nome e codice stanza");
