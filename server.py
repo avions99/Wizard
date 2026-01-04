@@ -15,6 +15,12 @@ app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], all
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
+from fastapi.responses import FileResponse, JSONResponse
+
+@app.get("/google82983cca318f8a41.html")
+async def google_verification():
+    return FileResponse("google82983cca318f8a41.html")
+
 class GameManager:
     def __init__(self):
         self.rooms = {}
