@@ -14,9 +14,6 @@ app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-
-from fastapi.responses import FileResponse, JSONResponse
-
 @app.get("/google82983cca318f8a41.html")
 async def google_verification():
     return FileResponse("google82983cca318f8a41.html")
