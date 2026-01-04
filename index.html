@@ -629,35 +629,38 @@
             </div>
         </div>
 
-        <div id="lobby-controls" class="hidden">
-            <div class="config-panel" id="config-panel">
-                <h4 style="color:var(--gold); margin:0 0 10px 0; font-size:0.9em;">CONFIGURAZIONE</h4>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                    <select id="max-players" onchange="updateRoundLimits()" style="padding:8px; background:#111; color:white; border:1px solid #444; border-radius:4px;">
-                        <option value="3">3 Giocatori</option><option value="4">4 Giocatori</option><option value="5">5 Giocatori</option><option value="6">6 Giocatori</option>
-                    </select>
-                    <div>
-                        <div style="display:flex; gap:5px; margin-bottom:5px;">
-                            <button class="btn btn-primary" onclick="selectAllRounds()" style="padding:4px 8px; font-size:0.75em; flex:1;">Tutti</button>
-                            <button class="btn btn-danger" onclick="deselectAllRounds()" style="padding:4px 8px; font-size:0.75em; flex:1;">Nessuno</button>
-                        </div>
-                        <div id="rounds-selector" class="round-grid no-scrollbar"></div>
-                    </div>
-                    <label style="display:flex; align-items:center; gap:8px; font-size:0.9em; cursor:pointer;">
-                        <input type="checkbox" id="open-cards" style="width:16px; height:16px;"> 1° round carte scoperte
-                    </label>
-                    <button class="btn btn-success" style="color:white; margin-top:5px;" onclick="saveConfig()">SALVA & AGGIORNA</button>
+       <div id="lobby-controls" class="hidden">
+    <div class="config-panel" id="config-panel">
+        <h4 style="color:var(--gold); margin:0 0 10px 0; font-size:0.9em;">CONFIGURAZIONE</h4>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <select id="max-players" onchange="updateRoundLimits()" style="padding:8px; background:#111; color:white; border:1px solid #444; border-radius:4px;">
+                <option value="3">3 Giocatori</option><option value="4">4 Giocatori</option><option value="5">5 Giocatori</option><option value="6">6 Giocatori</option>
+            </select>
+            <div>
+                <div style="display:flex; gap:5px; margin-bottom:5px;">
+                    <button class="btn btn-primary" onclick="selectAllRounds()" style="padding:4px 8px; font-size:0.75em; flex:1;">Tutti</button>
+                    <button class="btn btn-danger" onclick="deselectAllRounds()" style="padding:4px 8px; font-size:0.75em; flex:1;">Nessuno</button>
                 </div>
+                <div id="rounds-selector" class="round-grid no-scrollbar"></div>
             </div>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.9em; cursor:pointer;">
+                <input type="checkbox" id="open-cards" style="width:16px; height:16px;"> 1° round carte scoperte
+            </label>
 
-            <div id="ready-panel" class="hidden" style="text-align:center; margin-top:20px;">
-                <p id="player-count-msg" style="color:#aaa; font-weight:bold; margin-bottom:10px;"></p>
-                <button id="start-btn" class="btn btn-success hidden" onclick="send('start_game',{})" style="width:100%; margin-bottom:10px; padding:15px;">AVVIA PARTITA</button>
-                <button class="btn btn-danger" onclick="leaveGame()" style="width:100%;">ABBANDONA</button>
-            </div>
+            <button class="btn btn-success" style="color:white; margin-top:5px;" onclick="saveConfig()">SALVA & AGGIORNA</button>
+
+            <button class="btn btn-danger" style="margin-top:5px; width:100%; border: 1px solid #ff4444;" onclick="destroyLobby()">⛔ CHIUDI STANZA</button>
         </div>
+    </div>
 
-        <div id="history-btn-container" class="sidebar-section hidden" style="flex:1; display:flex; flex-direction:column; justify-content:flex-end;">
+    <div id="ready-panel" class="hidden" style="text-align:center; margin-top:20px;">
+        <p id="player-count-msg" style="color:#aaa; font-weight:bold; margin-bottom:10px;"></p>
+        <button id="start-btn" class="btn btn-success hidden" onclick="send('start_game',{})" style="width:100%; margin-bottom:10px; padding:15px;">AVVIA PARTITA</button>
+        <button class="btn btn-danger" onclick="leaveGame()" style="width:100%;">ABBANDONA</button>
+    </div>
+</div>
+
+        <div id="history-btn-container" class="sidebar-section hidden" style="flex-shrink:0; margin-top: auto; padding-top: 10px; border-top: 1px solid #333;">
             <button class="btn btn-gold" onclick="toggleHistoryModal()">📜 VEDI STORICO</button>
         </div>
     </div>
@@ -768,7 +771,15 @@ function connect(rid, nick) {
 
     ws.onmessage = e => {
         const data = JSON.parse(e.data);
-        if(data.error) showCustomAlert(data.error); // Usa alert custom
+
+        //GESTIONE CHIUSURA STANZA
+        if (data.action === 'lobby_destroyed') {
+            alert("Il creatore ha chiuso la stanza.");
+            fullExit(); // Riporta tutti alla home
+            return;
+        }
+
+        if(data.error) showCustomAlert(data.error);
         else render(data);
     };
 
@@ -845,35 +856,42 @@ function renderLobby(s) {
     readyPanel.classList.toggle('hidden', !configured);
 
 if(configured) {
-        const playerCountElem = document.getElementById('player-count-msg');
         const count = s.players.length;
         const max = config.max_players;
 
-        // Aggiorna il testo
-        playerCountElem.innerText = `${count} / ${max} GIOCATORI`;
-
-        // Logica colori e visibilità bottone
-        const startBtn = document.getElementById('start-btn');
+        // 1. Calcola Colore e Testo
+        let msgColor = '#4caf50'; // Verde
+        let msgText = `${count} / ${max} GIOCATORI`;
+        let canStart = (count >= 3 && count <= max); // Regola: tra 3 e Max
 
         if (count > max) {
-            // TROPPI GIOCATORI
-            playerCountElem.style.color = '#ff4444'; // Rosso
-            playerCountElem.innerText += " (Limite superato!)";
-            startBtn.classList.add('hidden'); // Nascondi tasto avvio
-        } else if (count < 3) { // Minimo 3 giocatori per Wizard (o 2 se vuoi permetterlo)
-            // POCHI GIOCATORI
-            playerCountElem.style.color = '#aaa';
-            startBtn.classList.add('hidden');
-        } else {
-            // NUMERO GIUSTO ( <= max e >= 3)
-            playerCountElem.style.color = '#4caf50'; // Verde
-            // Mostra il tasto solo se sono il creatore
-            if (isCreator) {
-                startBtn.classList.remove('hidden');
-            } else {
-                startBtn.classList.add('hidden');
-            }
+            msgColor = '#ff4444'; // Rosso
+            msgText += " (Limite superato!)";
+            canStart = false;
+        } else if (count < 3) {
+            msgColor = '#aaa'; // Grigio
+            canStart = false;
         }
+
+        // 2. Prepara i Bottoni HTML in base al ruolo
+        let buttonsHtml = '';
+
+        if (isCreator) {
+            // SE SONO L'HOST
+            if (canStart) {
+                buttonsHtml += `<button class="btn btn-success" onclick="send('start_game',{})" style="width:100%; margin-bottom:10px; padding:15px;">AVVIA PARTITA</button>`;
+            }
+            buttonsHtml += `<button class="btn btn-danger" onclick="destroyLobby()" style="width:100%; border: 2px solid #ff4444;">⛔ CHIUDI STANZA</button>`;
+        } else {
+            // SE SONO UN OSPITE
+            buttonsHtml += `<button class="btn btn-danger" onclick="leaveGame()" style="width:100%;">ABBANDONA</button>`;
+        }
+
+        // 3. Inserisci tutto nel pannello
+        readyPanel.innerHTML = `
+            <p style="color:${msgColor}; font-weight:bold; margin-bottom:10px;">${msgText}</p>
+            ${buttonsHtml}
+        `;
     }
 
 document.getElementById('player-list').innerHTML = s.players.map(p => {
@@ -897,6 +915,19 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
 }
 
     function renderGame(s) {
+        const histContainer = document.getElementById('history-btn-container');
+
+        // Creiamo i bottoni
+        let sidebarButtons = `<button class="btn btn-gold" onclick="toggleHistoryModal()">📜 VEDI STORICO</button>`;
+
+        if (isCreator) {
+            sidebarButtons += `<button class="btn btn-danger" onclick="destroyLobby()" style="margin-top:10px; border: 2px solid #ff4444; font-size:0.8em;">⛔ CHIUDI STANZA</button>`;
+        }
+
+        // Iniettiamo e mostriamo SUBITO
+        histContainer.innerHTML = sidebarButtons;
+        histContainer.classList.remove('hidden');
+
         // MOSTRA CHAT IN GAME
         document.getElementById('sidebar-chat-section').classList.remove('hidden');
 
@@ -1107,6 +1138,12 @@ document.getElementById('confirm-yes-btn').onclick = () => {
     if (confirmCallback) confirmCallback();
     closeCustomConfirm();
 };
+
+function destroyLobby() {
+        if(confirm("Sei sicuro? Questo cancellerà la partita per TUTTI i giocatori.")) {
+            send('cancel_lobby', {});
+        }
+    }
 
     function showCustomAlert(msg) {
     document.getElementById('custom-alert-msg').innerText = msg;

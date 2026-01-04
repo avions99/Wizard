@@ -435,6 +435,29 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, player_id: str)
                     game.reset_game()
                     game.start_next_round()
 
+            # --- AGGIUNGERE QUESTO BLOCCO ---
+            elif msg['action'] == 'cancel_lobby':
+                # Verifica: Solo il creatore (primo della lista) può cancellare
+                if manager.lobby_players[room_id] and manager.lobby_players[room_id][0] == player_id:
+                    print(f"[SERVER] Il creatore {player_id} sta chiudendo la stanza {room_id}")
+
+                    # 1. Avvisa tutti i client
+                    for ws_client in manager.rooms[room_id]:
+                        try:
+                            # Inviamo un messaggio speciale che il frontend riconoscerà
+                            await ws_client.send_text(json.dumps({"action": "lobby_destroyed"}))
+                        except:
+                            pass
+
+                    # 2. Pulisci la memoria del server
+                    if room_id in manager.rooms: del manager.rooms[room_id]
+                    if room_id in manager.lobby_players: del manager.lobby_players[room_id]
+                    if room_id in manager.active_games: del manager.active_games[room_id]
+                    if room_id in manager.lobby_configs: del manager.lobby_configs[room_id]
+
+                    # Interrompiamo il ciclo per questo socket poiché la stanza non esiste più
+                    break
+
             # --- DEBUGGING CHAT ---
             elif msg['action'] == 'chat_message':
                 print(f"[DEBUG CHAT] Ricevuto da {player_id}: {msg.get('message')}")
