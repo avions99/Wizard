@@ -1302,12 +1302,34 @@ function showGameOver(s) {
     function deselectAllRounds() { for(let i=1; i<=20; i++) { let c=document.getElementById(`round-${i}`); if(c) c.checked=false; } updateSelectedRounds(); }
 
     let selRounds=[];
-    function updateSelectedRounds() {
-        selRounds=[]; for(let i=1;i<=20;i++){ let c=document.getElementById(`round-${i}`); if(c&&c.checked) selRounds.push(i); }
+function updateSelectedRounds() {
+        selRounds=[];
+        for(let i=1;i<=20;i++){
+            let c=document.getElementById(`round-${i}`);
+            if(c&&c.checked) selRounds.push(i);
+        }
+
+        // Logica Round 1 Carte Scoperte
         const oc = document.getElementById('open-cards');
         const hasRound1 = selRounds.includes(1);
         oc.disabled = !hasRound1;
         if (!hasRound1) oc.checked = false;
+
+        // --- NUOVO: DISABILITA TASTO SALVA SE 0 ROUND ---
+        const saveBtn = document.querySelector('button[onclick="saveConfig()"]');
+        if(saveBtn) {
+            if(selRounds.length === 0) {
+                saveBtn.disabled = true;
+                saveBtn.style.opacity = "0.5";
+                saveBtn.innerText = "SELEZIONA ALMENO UN ROUND";
+                saveBtn.style.cursor = "not-allowed";
+            } else {
+                saveBtn.disabled = false;
+                saveBtn.style.opacity = "1";
+                saveBtn.innerText = "SALVA & AGGIORNA";
+                saveBtn.style.cursor = "pointer";
+            }
+        }
     }
 
     function confirmRoundEnd() { if(isCreator) send('start_next_round',{}); }
