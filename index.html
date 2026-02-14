@@ -23,7 +23,7 @@
             --error-red: #ff3333;
         }
 
-        body { background: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; overflow: hidden; touch-action: manipulation; }
+        body { background: var(--bg); color: #e0e0e0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; position: fixed; width: 100%; height: 100%; }
         .hidden { display: none !important; }
 
         /* SCROLLBAR PERSONALIZZATA */
@@ -243,7 +243,7 @@
         }
 
         @media (max-width: 850px) {
-            #hand-container { height: 170px; padding-top: 60px; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-x: contain; justify-content: flex-start; bottom: 30px; }
+            #hand-container { height: 170px; padding-top: 60px; overflow-x: auto; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; overscroll-behavior-x: contain; justify-content: flex-start; bottom: 30px; pointer-events: auto !important; }
             #hand { padding: 0 40px 20px 40px; min-width: max-content; }
             .hand-card { width: 80px; height: 116px; margin-left: -35px; }
         }
@@ -310,6 +310,115 @@
         .toast-container { position: fixed; top: 10%; left: 50%; transform: translateX(-50%); z-index: 5000; width: 90%; max-width: 400px; pointer-events: none; }
         .toast-error { background: #111; color: #ffcccc; padding: 15px; border-radius: 8px; box-shadow: 0 10px 40px rgba(0,0,0,1); display: flex; align-items: center; gap: 15px; border: 2px solid var(--error-red); justify-content: center; font-weight: bold; font-size: 1.1em; text-align: center; pointer-events: auto; animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
         @keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }
+
+/* === NOTIFICA TURNO === */
+#turn-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: linear-gradient(135deg, var(--gold) 0%, #ffaa00 100%);
+    color: #000;
+    padding: 25px 50px;
+    border-radius: 20px;
+    font-size: 1.8em;
+    font-weight: bold;
+    text-align: center;
+    z-index: 10000;
+    box-shadow: 0 10px 40px rgba(255, 204, 0, 0.6), 0 0 0 3px rgba(0,0,0,0.3);
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#turn-toast.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+@media (max-width: 850px) {
+    #turn-toast {
+        font-size: 1.4em;
+        padding: 20px 35px;
+    }
+}
+
+/* === CARD STATISTICHE GIOCATORE === */
+.player-stats-card {
+    position: absolute;
+    top: 160px;
+    right: 20px;
+    background: rgba(26, 26, 26, 0.95);
+    border: 2px solid var(--gold);
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-width: 70px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    backdrop-filter: blur(10px);
+    z-index: 55;
+}
+
+.player-stats-card .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    font-size: 0.9em;
+}
+
+.player-stats-card .stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.player-stats-card .stat-label {
+    color: #aaa;
+    font-size: 0.75em;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.player-stats-card .stat-value {
+    color: #fff;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+.player-stats-card .position {
+    color: var(--gold);
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 8px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+.player-stats-card .divider {
+    height: 1px;
+    background: rgba(255,204,0,0.3);
+    margin: 8px 0;
+}
+
+@media (max-width: 850px) {
+    .player-stats-card {
+        top: 75px;
+        right: 10px;
+        min-width: 70px;
+        padding: 10px 12px;
+    }
+
+    .player-stats-card .position {
+        font-size: 1.2em;
+        margin-bottom: 6px;
+    }
+
+    .player-stats-card .stat-row {
+        font-size: 0.8em;
+    }
+
+    .player-stats-card .stat-value {
+        font-size: 1em;
+    }
+}
 
         #trick-winner-notification {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -60%);
@@ -511,7 +620,7 @@
     </style>
 </head>
 <body>
-
+<div id="turn-toast">È IL TUO TURNO!</div>
 <button id="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
 
 <div id="choice-overlay" class="overlay hidden">
@@ -599,7 +708,7 @@
             <div class="trump-label">BRISCOLA</div>
             <div id="trump-content"></div>
         </div>
-
+        <div class="player-stats-card hidden"></div>
         <div id="open-cards-display" class="open-cards-container hidden"></div>
 
         <div id="table-center"></div>
@@ -693,10 +802,73 @@
 </div>
 
 <script>
+// === VARIABILE GLOBALE PER TRACCIARE L'ULTIMO TURNO ===
+let lastTurn = null;
+let lastToastId = '';
+let toastControl = {
+    lastId: "",
+    pending: false
+};
+
+// === FUNZIONE PER MOSTRARE IL TOAST "È IL TUO TURNO" ===
+function showTurnToast() {
+    const toast = document.getElementById('turn-toast');
+    if (!toast) return;
+
+    toast.classList.add('show');
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 750);
+
+    // Vibrazione su mobile (opzionale)
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+    }
+}
+
+// === FUNZIONE PER AGGIORNARE LE STATISTICHE ===
+function updatePlayerStats(gameState) {
+    const statsCard = document.querySelector('.player-stats-card');
+    if (!statsCard || !gameState.players) return;
+
+    const myPlayer = gameState.players.find(p => p.name === myName);
+    if (!myPlayer) return;
+
+    // Calcola posizione
+    const sortedPlayers = [...gameState.players].sort((a, b) => b.score - a.score);
+    const myPosition = sortedPlayers.findIndex(p => p.name === myName) + 1;
+    const positionText = myPosition + '°';
+
+    // Prese
+    const tricksWon = myPlayer.tricks_won || 0;
+    const prediction = myPlayer.prediction !== null && myPlayer.prediction !== undefined
+        ? myPlayer.prediction
+        : '-';
+
+    // Mostra la card
+    statsCard.classList.remove('hidden');
+
+    // Aggiorna contenuto
+    statsCard.innerHTML = `
+        <div class="position">${positionText}</div>
+        <div class="divider"></div>
+        <div class="stat-row">
+            <span class="stat-label">Punti</span>
+            <span class="stat-value">${myPlayer.score}</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Prese</span>
+            <span class="stat-value">${tricksWon}/${prediction}</span>
+        </div>
+    `;
+}
+
     let ws, myName, currentRoom, isCreator = false;
     let currentState = null;
     let animationState = { active: false, cards: [], winner: null };
     let lastTricksCompleted = -1;
+    let justCompletedTrick = false; // Flag per evitare popup subito dopo un trick
 
     function toggleSidebar() {
         const sb = document.getElementById('sidebar');
@@ -919,9 +1091,12 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
 
     let centralText = isCreator ? (configured ? 'PRONTO AD AVVIARE' : 'CONFIGURAZIONE...') : "IN ATTESA DELL'HOST";
     document.getElementById('table-center').innerHTML = `<div style="color:rgba(255,255,255,0.3); text-align:center; font-weight:bold; font-size: 1.2em;">${centralText}</div>`;
+    // Nascondi card statistiche in lobby
+    document.querySelector('.player-stats-card').classList.add('hidden');
 }
+let lastProcessedTurnId = "";
 
-    function renderGame(s) {
+function renderGame(s) {
         const histContainer = document.getElementById('history-btn-container');
 
         // Creiamo i bottoni
@@ -942,90 +1117,22 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
         document.querySelector('.trump-zone').classList.remove('hidden');
         document.querySelector('.round-title').classList.remove('hidden');
 
-        const turnInd = document.getElementById('turn-indicator');
-        if(s.current_turn && ['BIDDING','PLAYING'].includes(s.state)) {
-            turnInd.innerText = `TOCCA A: ${s.current_turn}`;
-            turnInd.classList.remove('hidden');
-        } else turnInd.classList.add('hidden');
 
-        // NASCONDI PULSANTE BOT
-        document.getElementById('add-bot-btn').classList.add('hidden');
-
-        // GESTIONE BRISCOLA WIZARD
-        const isPickingTrump = (s.state === 'WAITING_FOR_DEALER_TRUMP' && s.current_turn === myName);
-        const overlay = document.getElementById('choice-overlay');
-        overlay.classList.toggle('hidden', !isPickingTrump);
-
-        const body = document.body;
-        if(isPickingTrump) body.classList.add('picking-trump-mode');
-        else body.classList.remove('picking-trump-mode');
-
-        // GESTIONE BRISCOLA (LOGICA CORRETTA PER WIZARD)
-        const trumpDiv = document.getElementById('trump-content');
-
-        // 1. Cerchiamo qual è il seme valido da mostrare
-        let suitToShow = null;
-
-        if (s.trump_card && s.trump_card.suit && s.trump_card.suit !== 'NESSUNO') {
-            // Caso A: La carta ha il suo seme (es. 5 di Cuori)
-            suitToShow = s.trump_card.suit;
-        } else if (s.trump_suit && s.trump_suit !== 'NESSUNO') {
-            // Caso B: La carta non ha seme (Wizard), ma il mazziere l'ha scelto
-            suitToShow = s.trump_suit;
-        }
-
-        // 2. Renderizziamo
-        if(s.trump_card) {
-            // C'è una carta fisica (Numero, Wizard o Jester)
-            let iconHtml = '';
-
-            // Se abbiamo trovato un seme valido (dalla carta o dalla scelta), mostriamo l'icona
-            if(suitToShow) {
-                const color = (suitToShow === 'CUORI' || suitToShow === 'QUADRI') ? '#ff5555' : '#ffffff';
-                iconHtml = `<div style="font-size: 2.5em; line-height: 1; margin-left: 8px; color: ${color}; text-shadow: 0 2px 5px black;">
-                                ${getSuitIcon(suitToShow)}
-                            </div>`;
-            }
-
-            trumpDiv.innerHTML = `
-                <div style="display:flex; align-items:center; justify-content:center;">
-                    <img src="/static/cards/${fn(s.trump_card)}" class="trump-img">
-                    ${iconHtml}
-                </div>`;
-        }
-        else if(s.trump_suit) {
-             // Caso di fallback: Solo seme senza carta fisica (raro, ma gestito)
-             const color = (s.trump_suit === 'CUORI' || s.trump_suit === 'QUADRI') ? '#e53935' : '#e0e0e0';
-             trumpDiv.innerHTML = `<div class="trump-suit-big" style="color:${color}">${getSuitIcon(s.trump_suit)}</div>`;
-        }
-        else {
-            trumpDiv.innerHTML = '<span style="color:#aaa; font-size:0.7em;">NESSUNA</span>';
-        }
-
-        const openDiv = document.getElementById('open-cards-display');
-        const showOpen = s.config.first_round_open_cards && s.round_num === s.selected_rounds[0] && s.state === 'BIDDING';
-        openDiv.classList.toggle('hidden', !showOpen);
-        if(showOpen) {
-            openDiv.innerHTML = `
-                <div class="open-cards-title">CARTE AVVERSARI</div>
-                ${s.players.filter(p => p.name !== myName).map(p => `
-                    <div class="open-card-player">
-                        <h5>${p.name}</h5>
-                        ${(p.hand||[]).map(c=>`<img src="/static/cards/${fn(c)}" class="open-card-img">`).join('')}
-                    </div>
-                `).join('')}
-            `;
-        }
-
-        // --- ANIMAZIONE NUOVA MANO ---
+        // ============================================================
+        // RILEVAMENTO FINE MANO E ANIMAZIONE
+        // ============================================================
         const currentTricksCount = s.tricks_completed || 0;
-        if(s.state === 'BIDDING') lastTricksCompleted = -1;
+        if(s.state === 'BIDDING') {
+            lastTricksCompleted = -1;
+            justCompletedTrick = false;
+        }
 
         if (lastTricksCompleted === -1) {
             lastTricksCompleted = currentTricksCount;
         }
         else if (currentTricksCount > lastTricksCompleted) {
             lastTricksCompleted = currentTricksCount;
+            justCompletedTrick = true;
             animationState.active = true;
             animationState.cards = s.last_trick_cards || [];
             animationState.winner = s.last_trick_winner;
@@ -1040,6 +1147,99 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
                 if (s.game_finished) showGameOver(s);
                 else if (s.state === 'FINISHED') showRoundResults(s);
             }, 4500);
+        }
+
+        // Reset del flag quando inizia un nuovo trick (prima carta giocata)
+        if (s.state === 'PLAYING' && s.table_cards && s.table_cards.length === 1) {
+            justCompletedTrick = false;
+        }
+
+        // === AGGIORNA STATISTICHE ===
+        updatePlayerStats(s);
+
+        // ============================================================
+        // GESTIONE INDICATORE TURNO E TOAST (CORRETTA)
+        // ============================================================
+        const turnInd = document.getElementById('turn-indicator');
+        const me = s.players ? s.players.find(p => p.name === myName) : null;
+
+        if (s.current_turn && (s.state === 'BIDDING' || s.state === 'PLAYING')) {
+            turnInd.innerText = `TOCCA A: ${s.current_turn}`;
+            turnInd.classList.remove('hidden');
+
+            if (s.state === 'PLAYING' && s.current_turn === myName) {
+                // Creiamo un ID unico che cambia se cambia il round, la mano o il giocatore
+                const currentTurnId = `${s.round_num}-${s.tricks_completed}-${s.current_turn}`;
+
+                // Condizioni per mostrare il toast:
+                const hasCards = me && me.hand && me.hand.length > 0;
+                const isNotAnimating = !animationState.active;
+                const tableReady = s.table_cards.length < s.players.length;
+
+                if (currentTurnId !== lastProcessedTurnId && isNotAnimating && hasCards && tableReady) {
+                    showTurnToast();
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    lastProcessedTurnId = currentTurnId;
+                }
+            }
+        } else {
+            turnInd.classList.add('hidden');
+            lastProcessedTurnId = ""; // Reset tra i round
+        }
+        // ============================================================
+
+        // NASCONDI PULSANTE BOT
+        document.getElementById('add-bot-btn').classList.add('hidden');
+
+        // GESTIONE BRISCOLA WIZARD
+        const isPickingTrump = (s.state === 'WAITING_FOR_DEALER_TRUMP' && s.current_turn === myName);
+        const overlay = document.getElementById('choice-overlay');
+        overlay.classList.toggle('hidden', !isPickingTrump);
+
+        const body = document.body;
+        if(isPickingTrump) body.classList.add('picking-trump-mode');
+        else body.classList.remove('picking-trump-mode');
+
+        // GESTIONE BRISCOLA
+        const trumpDiv = document.getElementById('trump-content');
+        let suitToShow = null;
+
+        if (s.trump_card && s.trump_card.suit && s.trump_card.suit !== 'NESSUNO') {
+            suitToShow = s.trump_card.suit;
+        } else if (s.trump_suit && s.trump_suit !== 'NESSUNO') {
+            suitToShow = s.trump_suit;
+        }
+
+        if(s.trump_card) {
+            let iconHtml = '';
+            if(suitToShow) {
+                const color = (suitToShow === 'CUORI' || suitToShow === 'QUADRI') ? '#ff5555' : '#ffffff';
+                iconHtml = `<div style="font-size: 2.5em; line-height: 1; margin-left: 8px; color: ${color}; text-shadow: 0 2px 5px black;">${getSuitIcon(suitToShow)}</div>`;
+            }
+            trumpDiv.innerHTML = `<div style="display:flex; align-items:center; justify-content:center;"><img src="/static/cards/${fn(s.trump_card)}" class="trump-img">${iconHtml}</div>`;
+        }
+        else if(s.trump_suit) {
+             const color = (s.trump_suit === 'CUORI' || s.trump_suit === 'QUADRI') ? '#e53935' : '#e0e0e0';
+             trumpDiv.innerHTML = `<div class="trump-suit-big" style="color:${color}">${getSuitIcon(s.trump_suit)}</div>`;
+        }
+        else {
+            trumpDiv.innerHTML = '<span style="color:#aaa; font-size:0.7em;">NESSUNA</span>';
+        }
+
+        // CARTE AVVERSARI
+        const openDiv = document.getElementById('open-cards-display');
+        const showOpen = s.config.first_round_open_cards && s.round_num === s.selected_rounds[0] && s.state === 'BIDDING';
+        openDiv.classList.toggle('hidden', !showOpen);
+        if(showOpen) {
+            openDiv.innerHTML = `
+                <div class="open-cards-title">CARTE AVVERSARI</div>
+                ${s.players.filter(p => p.name !== myName).map(p => `
+                    <div class="open-card-player">
+                        <h5>${p.name}</h5>
+                        ${(p.hand||[]).map(c=>`<img src="/static/cards/${fn(c)}" class="open-card-img">`).join('')}
+                    </div>
+                `).join('')}
+            `;
         }
 
         // RENDER TAVOLO
@@ -1068,7 +1268,6 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
         if (animationState.active) handDiv.classList.add('blocked-hand');
         else handDiv.classList.remove('blocked-hand');
 
-        const me = s.players.find(p => p.name === myName);
         if(me && me.hand) {
             me.hand.forEach (c => {
                 const img = document.createElement('img');
@@ -1082,7 +1281,7 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
             });
         }
 
-        // AGGIORNAMENTO LISTA GIOCATORI CON NUOVO LAYOUT COMPATTO
+        // AGGIORNAMENTO LISTA GIOCATORI
         document.getElementById('player-list').innerHTML = s.players.map(p => {
             const isMe = p.name === s.current_turn;
             const pred = p.prediction !== null ? p.prediction : '-';
@@ -1115,7 +1314,6 @@ document.getElementById('player-list').innerHTML = s.players.map(p => {
             resOverlay.classList.add('hidden');
         }
     }
-
     function showTrickWinner(w) {
         const n = document.getElementById('trick-winner-notification');
         n.innerHTML = `🏆 MANO A <b>${w}</b>`;

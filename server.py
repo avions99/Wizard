@@ -12,6 +12,10 @@ from engine.card import Suit
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+@app.get("/ping")
+async def ping():
+    # Risponde con un JSON minuscolo (circa 15 byte)
+    return {"status": "ok"}
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/google82983cca318f8a41.html")
