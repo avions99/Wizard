@@ -12,6 +12,14 @@ from engine.card import Suit
 
 app = FastAPI()
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+@app.get("/robots.txt")
+async def get_robots():
+    return FileResponse("robots.txt")
+
+@app.get("/sitemap.xml")
+async def get_sitemap():
+    return FileResponse("sitemap.xml")
+
 @app.get("/ping")
 async def ping():
     # Risponde con un JSON minuscolo (circa 15 byte)
